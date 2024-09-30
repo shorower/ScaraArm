@@ -11,7 +11,7 @@ class ScaraArmControl:
         self.root.title("SCARA Arm Control")
         
         # Initialize serial communication (make sure the correct port is used)
-        self.arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
+        # self.arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
         time.sleep(2)  # Give some time for the connection to establish
 
         # Set canvas size to 800x500
@@ -155,31 +155,35 @@ class ScaraArmControl:
         self.send_angles_to_arduino(Q1, Q2)
 
     def draw_arm(self, base_angle, elbow_angle):
-        """Draw the SCARA arm on the canvas given the angles."""
-        # Convert angles to radians for the calculations
+        """Draw the SCARA arm with the gripper centered at the end."""
         base_angle_rad = math.radians(base_angle)
         elbow_angle_rad = math.radians(elbow_angle)
 
-        # Origin of the SCARA arm (center of the canvas)
         origin_x = 600
         origin_y = 400
-        
-        # Calculate position of first joint (shoulder)
+
         shoulder_x = origin_x + self.link1_length * math.cos(base_angle_rad)
         shoulder_y = origin_y - self.link1_length * math.sin(base_angle_rad)
-        
-        # Calculate position of second joint (elbow)
+
         elbow_x = shoulder_x + self.link2_length * math.cos(base_angle_rad + elbow_angle_rad)
         elbow_y = shoulder_y - self.link2_length * math.sin(base_angle_rad + elbow_angle_rad)
 
-        # Draw the arm on the canvas
-        self.canvas.create_line(origin_x, origin_y, shoulder_x, shoulder_y, width=5, fill="blue")  # Link 1
-        self.canvas.create_line(shoulder_x, shoulder_y, elbow_x, elbow_y, width=5, fill="red")    # Link 2
+        self.canvas.create_line(origin_x, origin_y, shoulder_x, shoulder_y, width=5, fill="blue")
+        self.canvas.create_line(shoulder_x, shoulder_y, elbow_x, elbow_y, width=5, fill="red")
 
-        # Draw joints
-        self.canvas.create_oval(origin_x - 5, origin_y - 5, origin_x + 5, origin_y + 5, fill='black')  # Base joint
-        self.canvas.create_oval(shoulder_x - 5, shoulder_y - 5, shoulder_x + 5, shoulder_y + 5, fill='black')  # Shoulder joint
-        self.canvas.create_oval(elbow_x - 5, elbow_y - 5, elbow_x + 5, elbow_y + 5, fill='black')  # Elbow joint
+        self.canvas.create_oval(origin_x - 5, origin_y - 5, origin_x + 5, origin_y + 5, fill='black')
+        self.canvas.create_oval(shoulder_x - 5, shoulder_y - 5, shoulder_x + 5, shoulder_y + 5, fill='black')
+        self.canvas.create_oval(elbow_x - 5, elbow_y - 5, elbow_x + 5, elbow_y + 5, fill='black')
+
+        # Gripper dimensions (centered at end effector)
+        gripper_width = 20
+        gripper_length = 40
+        gripper_x1 = elbow_x - gripper_length / 2
+        gripper_y1 = elbow_y - gripper_width / 2
+        gripper_x2 = elbow_x + gripper_length / 2
+        gripper_y2 = elbow_y + gripper_width / 2
+
+        self.canvas.create_rectangle(gripper_x1, gripper_y1, gripper_x2, gripper_y2, fill="green")
 
     def update_arm_from_inputs(self):
         """Updates the SCARA arm position based on input fields for Q1 and Q2 angles."""
