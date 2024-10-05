@@ -1,9 +1,7 @@
 import tkinter as tk
 import math
-import serial  # Import the pyserial library
+import serial
 import time
-
-
 
 class ScaraArmControl:
     def __init__(self, root):
@@ -11,10 +9,10 @@ class ScaraArmControl:
         self.root.title("SCARA Arm Control")
         
         # Initialize serial communication (make sure the correct port is used)
-        # self.arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
+        self.arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
         time.sleep(2)  # Give some time for the connection to establish
 
-        # Set canvas size to 800x500
+        # Set canvas size to 1200x550
         self.canvas = tk.Canvas(root, width=1200, height=550, bg='white')
         self.canvas.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
         
@@ -41,15 +39,30 @@ class ScaraArmControl:
         self.set_angles_button = tk.Button(root, text="Set Angles", command=self.update_arm_from_inputs)
         self.set_angles_button.grid(row=3, column=2, pady=10)
 
+        # Button to add multiple (X, Y) values
+        self.add_point_button = tk.Button(root, text="Add Point", command=self.add_point)
+        self.add_point_button.grid(row=5, column=0, pady=10)
+
+        # Button to process the points one by one
+        self.process_button = tk.Button(root, text="Process All Points", command=self.process_points)
+        self.process_button.grid(row=5, column=1, pady=10)
+
         # Control button for reset
         self.reset_button = tk.Button(root, text="Reset", command=self.reset_arm)
-        self.reset_button.grid(row=4, column=2, pady=10)
+        self.reset_button.grid(row=5, column=2, pady=10)
 
         # Labels to display calculated angles (theta1 and theta2)
         self.theta1_label = tk.Label(root, text="Theta θ1:    0°")
         self.theta1_label.grid(row=3, column=4)
         self.theta2_label = tk.Label(root, text="Theta θ2:    0°")
         self.theta2_label.grid(row=4, column=4)
+
+        # List to store multiple (X, Y) points
+        self.points_list = []
+
+        # Text box to display the points list
+        self.points_text = tk.Text(root, height=28, width=15)
+        self.points_text.grid(row=0, column=4, rowspan=6, padx=10)
 
         # Initial drawing of SCARA arm
         self.update_arm()
@@ -120,7 +133,7 @@ class ScaraArmControl:
         global Q2
         Q2 = math.degrees(angle2)
 
-        print("Q1: ", Q1, "  ", "Q2: ", Q2)
+        # print("Q1: ", Q1, "  ", "Q2: ", Q2)
 
         return Q1, Q2
 
@@ -186,29 +199,27 @@ class ScaraArmControl:
         self.canvas.create_rectangle(gripper_x1, gripper_y1, gripper_x2, gripper_y2, fill="green")
 
     def update_arm_from_inputs(self):
-        """Updates the SCARA arm position based on input fields for Q1 and Q2 angles."""
+        """Updates the SCARA arm position based on angle input fields."""
+        self.canvas.delete("all")
+        self.draw_graph_paper()
+
         try:
-            # Get angles from input fields
+            # Get joint angles from input fields
             base_angle = float(self.theta1_entry.get())
             elbow_angle = float(self.theta2_entry.get())
         except ValueError:
-            print("Please enter valid numbers for θ1 and θ2.")
+            print("Please enter valid numbers for angles.")
             return
 
         # Update angle labels
         self.theta1_label.config(text=f"θ1: {round(base_angle, 2)}°")
         self.theta2_label.config(text=f"θ2: {round(elbow_angle, 2)}°")
 
-        # Clear the canvas and redraw graph paper
-        self.canvas.delete("all")
-        self.draw_graph_paper()
-
-        # Draw the arm using the input angles
+        # Draw the arm
         self.draw_arm(base_angle, elbow_angle)
 
         # Send angles to Arduino
         self.send_angles_to_arduino(base_angle, elbow_angle)
-        
 
     def send_angles_to_arduino(self, base_angle, elbow_angle):
         """Send angles Q1 and Q2 to Arduino via serial communication."""
@@ -220,6 +231,41 @@ class ScaraArmControl:
         except Exception as e:
             print(f"Error sending data to Arduino: {e}")
 
+    def add_point(self):
+        """Adds a point (X, Y) to the points list."""
+        try:
+            # Get the X and Y values from the input fields
+            x = int(self.x_entry.get())
+            y = int(self.y_entry.get())
+            self.points_list.append((x, y))  # Add point to the list
+            print(f"Added point: ({x}, {y})")
+            self.x_entry.delete(0, tk.END)
+            self.y_entry.delete(0, tk.END)
+
+            # Update the points list in the text box
+            self.points_text.insert(tk.END, f"({x}, {y})\n")  # Display point in the text box
+        except ValueError:
+            print("Please enter valid numbers for X and Y coordinates.")
+
+    def process_points(self, index=0):
+        """Processes each (X, Y) point in the points list one by one."""
+        if index < len(self.points_list):
+            x, y = self.points_list[index]
+            print(f"Processing point: ({x}, {y})")
+
+            # Update the input fields with the current (x, y) values
+            self.x_entry.delete(0, tk.END)
+            self.x_entry.insert(0, str(x))
+            self.y_entry.delete(0, tk.END)
+            self.y_entry.insert(0, str(y))
+
+            # Update the arm's position and draw the graph for this point
+            self.update_arm()
+
+            # Schedule the next point to be processed after 20 seconds (20000 milliseconds)
+            self.root.after(15000, self.process_points, index + 1)
+
+
     def reset_arm(self):
         """Resets the SCARA arm to the initial position."""
         self.x_entry.delete(0, tk.END)
@@ -230,9 +276,14 @@ class ScaraArmControl:
         self.theta1_entry.insert(0, "0")
         self.theta2_entry.delete(0, tk.END)
         self.theta2_entry.insert(0, "0")
+        self.theta1_label.config(text="Theta θ1:    0°")
+        self.theta2_label.config(text="Theta θ2:    0°")
+        self.points_list = []
+        self.points_text.delete(1.0, tk.END)
         self.update_arm()
 
-# Create the main window
-root = tk.Tk()
-scara_control = ScaraArmControl(root)
-root.mainloop()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ScaraArmControl(root)
+    root.mainloop()
