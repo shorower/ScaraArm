@@ -1,6 +1,6 @@
 import tkinter as tk
 import math
-import serial
+import serial  # Import the pyserial library
 import time
 
 class ScaraArmControl:
@@ -9,7 +9,8 @@ class ScaraArmControl:
         self.root.title("SCARA Arm Control")
         
         # Initialize serial communication (make sure the correct port is used)
-        self.arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
+        # self.arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
+        self.arduino = serial.Serial(port='/dev/cu.usbmodem11201', baudrate=9600, timeout=1)  # Replace with your Arduino port
         time.sleep(2)  # Give some time for the connection to establish
 
         # Set canvas size to 1200x550
