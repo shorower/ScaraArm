@@ -9,7 +9,7 @@ import math
 # Initialize the recognizer
 r = sr.Recognizer()
 
-arduino = serial.Serial(port='/dev/cu.usbmodem101', baudrate=9600, timeout=1)  # Replace with your Arduino port
+arduino = serial.Serial(port='/dev/cu.usbmodem11201', baudrate=9600, timeout=1)  # Replace with your Arduino port
 print("Connecting....")
 time.sleep(10)
 
